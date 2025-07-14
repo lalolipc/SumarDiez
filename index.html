@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Escoba del 10</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .option-card {
+      background-color: #fef3c7;
+      border-radius: 1rem;
+      padding: 0.5rem;
+      transition: transform 0.2s;
+    }
+    .option-card:hover {
+      transform: scale(1.05);
+    }
+    .acierto-anim {
+      animation: pop 0.5s ease-in-out;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    #popup {
+      margin-top: 1rem;
+      display: none;
+    }
+    #empty-slot {
+      width: 8rem;
+      height: 13rem;
+      border: 2px dashed #ccc;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom:10px;
+      margin-top: -10px;
+    }
+  </style>
+</head>
+<body class="bg-green-600 flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white rounded-2xl shadow-xl p-4 max-w-sm w-full text-center relative">
+    <h1 class="text-2xl font-bold mb-4">SUMAR 10</h1>
+
+    <div id="card-area" class="flex justify-center items-center gap-4 mb-6">
+      <div>
+        <img id="baseImg" src="" alt="" class="w-32">
+          <p id="baseLabel" class="mt-2 font-medium">Carta base</p>
+      </div>
+      <div id="selectedCard" class="hidden">
+        <img id="selectedImg" src="" alt="" class="w-32">
+        <p id="tuCarta" class="mt-2 font-medium"></p>
+      </div>
+      <div id="empty-slot">?</div>
+      <p id="" class="mt-2 font-medium"></p>
+
+    </div>
+    <p id="texto-elegi-una" class="mb-2 font-medium">Elige una:</p>
+
+    <div id="opciones" class="grid grid-cols-2 gap-4 mb-4">
+
+      <button id="opt0" onclick="checkAnswer(0)" class="option-card">
+        <img id="img0" src="" alt="" class="w-32 h-48 mx-auto">
+        <p id="carta0" class="mt-2 font-medium"></p>
+
+      </button>
+      <button id="opt1" onclick="checkAnswer(1)" class="option-card">
+        <img id="img1" src="" alt="" class="w-32 h-48 mx-auto">
+        <p id="carta1" class="mt-2 font-medium"></p>
+
+      </button>
+    </div>
+
+    <div id="popup">
+      <button onclick="nuevaRonda()" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded">¡Continuar!</button>
+    </div>
+
+    <p id="feedback" class="text-lg font-semibold"></p>
+    <p id="score" class="mt-2 font-medium"></p>
+  </div>
+
+  <audio id="audio-correcto" src="audio/bien.wav"></audio>
+  <audio id="audio-error" src="audio/intentalo.wav"></audio>
+
+  <script>
+    const cartas = [
+    {valor:1, palo:'copas'}, {valor:2, palo:'copas'}, {valor:3, palo:'copas'},
+  {valor:4, palo:'copas'}, {valor:5, palo:'copas'}, {valor:6, palo:'copas'},
+  {valor:7, palo:'copas'}, {valor:8, palo:'copas'}, {valor:9, palo:'copas'},
+
+  {valor:1, palo:'oros'}, {valor:2, palo:'oros'}, {valor:3, palo:'oros'},
+  {valor:4, palo:'oros'}, {valor:5, palo:'oros'}, {valor:6, palo:'oros'},
+  {valor:7, palo:'oros'}, {valor:8, palo:'oros'}, {valor:9, palo:'oros'}
+    ];
+
+    let rondas = 0, aciertos = 0;
+    let baseValor;
+
+    function nuevaRonda() {
+      rondas++;
+      const base = cartas[Math.floor(Math.random()*cartas.length)];
+      baseValor = base.valor;
+      const correcta = cartas.find(c=>c.valor + base.valor === 10);
+      let otra;
+      do { otra = cartas[Math.floor(Math.random()*cartas.length)]; }
+      while (otra.valor === correcta.valor && otra.palo === correcta.palo);
+
+      const opciones = [correcta, otra].sort(()=>Math.random() - 0.5);
+
+      document.getElementById('baseImg').src = `cards/${base.valor}_${base.palo}.jpg`;
+      document.getElementById('baseLabel').textContent = `${base.valor}`;
+
+      opciones.forEach((c,i)=>{
+        document.getElementById(`img${i}`).src = `cards/${c.valor}_${c.palo}.jpg`;
+        document.getElementById(`img${i}`).alt = `${c.valor} de ${c.palo}`;
+        document.getElementById(`opt${i}`).dataset.valor = c.valor;
+        document.getElementById(`opt${i}`).dataset.palo = c.palo;
+        document.getElementById(`carta${i}`).textContent = `${c.valor}`;
+        document.getElementById(`carta${i}`).textContent = `${c.valor}`;
+
+
+      });
+
+      //document.getElementById('feedback').textContent = '';
+      //document.getElementById('score').textContent = `Ronda ${rondas}/30 — Aciertos: ${aciertos}`;
+      document.getElementById('selectedCard').classList.add('hidden');
+      document.getElementById('selectedImg').classList.remove('acierto-anim');
+      document.getElementById('popup').style.display = 'none';
+      document.getElementById('opciones').classList.remove('hidden');
+      document.getElementById('empty-slot').style.display = 'flex';
+    }
+
+    function checkAnswer(i) {
+      const elegidoValor = parseInt(document.getElementById(`opt${i}`).dataset.valor);
+      const elegidoPalo = document.getElementById(`opt${i}`).dataset.palo;
+      const correcto = baseValor + elegidoValor === 10;
+      const f = document.getElementById('feedback');
+      const ac = document.getElementById('audio-correcto');
+      const er = document.getElementById('audio-error');
+
+      if (correcto) {
+        document.getElementById('empty-slot').style.display = 'none';
+        document.getElementById('texto-elegi-una').style.display = 'none';
+        document.getElementById('selectedImg').src = `cards/${elegidoValor}_${elegidoPalo}.jpg`;
+        document.getElementById('selectedImg').alt = `${elegidoValor} de ${elegidoPalo}`;
+        document.getElementById('tuCarta').textContent = `${elegidoValor}`;
+
+        document.getElementById('selectedCard').classList.remove('hidden');
+        document.getElementById('selectedImg').classList.add('acierto-anim');
+
+       
+
+        aciertos++;
+       // f.textContent = '¡Bien!';
+        f.className = 'text-green-600 font-bold';
+        ac.play();
+
+        document.getElementById('opciones').classList.add('hidden');
+        document.getElementById('popup').style.display = 'block';
+
+        if (rondas >= 30) {
+          f.textContent += ' — Fin del juego';
+          document.getElementById('popup').style.display = 'none';
+        }
+      } else {
+        document.getElementById('selectedCard').classList.add('hidden');
+
+        // f.textContent = 'Inténtalo otra vez';
+        f.className = 'text-red-600 font-bold';
+        er.play();
+      }
+    }
+
+    nuevaRonda();
+  </script>
+</body>
+</html>
